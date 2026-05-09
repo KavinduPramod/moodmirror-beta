@@ -18,16 +18,16 @@ import requests
 # ============================================================================
 
 print("\n" + "="*70)
-print("🧠 REDDIT MENTAL HEALTH DATA COLLECTOR")
+print(" REDDIT MENTAL HEALTH DATA COLLECTOR")
 print("="*70 + "\n")
 
 # Load credentials
-print("📋 Loading credentials...")
+print(" Loading credentials...")
 with open('credentials.json', 'r') as f:
     credentials = json.load(f)
 
 # Load configuration
-print("⚙️  Loading configuration...")
+print("  Loading configuration...")
 with open('config.json', 'r') as f:
     config = json.load(f)
 
@@ -42,7 +42,7 @@ print(f"   Subreddits to search: {len(config['subreddits_to_search'])}")
 # REDDIT CONNECTION
 # ============================================================================
 
-print("\n🔌 Connecting to Reddit API...")
+print("\nConnecting to Reddit API...")
 reddit = praw.Reddit(
     client_id=credentials['client_id'],
     client_secret=credentials['client_secret'],
@@ -52,9 +52,9 @@ reddit = praw.Reddit(
 # Test connection
 try:
     reddit.user.me()
-    print("✅ Connected successfully (read-only mode)")
+    print(" Connected successfully (read-only mode)")
 except:
-    print("✅ Connected successfully")
+    print(" Connected successfully")
 
 # Initialize sentiment analyzer
 sentiment_analyzer = SentimentIntensityAnalyzer()
@@ -71,7 +71,7 @@ def get_users_from_subreddit(subreddit_name, sort_method, limit):
     Find active users in a subreddit
     Returns: set of anonymous user hashes
     """
-    print(f"\n🔍 Searching r/{subreddit_name} ({sort_method})...")
+    print(f"\n Searching r/{subreddit_name} ({sort_method})...")
     
     try:
         subreddit = reddit.subreddit(subreddit_name)
@@ -116,7 +116,7 @@ def get_users_from_subreddit(subreddit_name, sort_method, limit):
         return users
         
     except Exception as e:
-        print(f"   ❌ Error: {e}")
+        print(f"    Error: {e}")
         return set()
 
 
@@ -378,152 +378,6 @@ def validate_sentiment_distribution(posts):
     return True, "Sentiment distribution validated", avg_sentiment
 
 
-def send_email_notification(milestone, total_users, avg_posts, avg_sentiment, time_elapsed):
-    """
-    Send email notification at collection milestones using Resend API
-    """
-    if 'resend_api_key' not in credentials or 'notification_email' not in credentials:
-        print("   ⚠️  Email notification skipped - Resend API key or email not configured")
-        return
-    
-    try:
-        # Calculate progress
-        progress_percent = (total_users / settings['target_users']) * 100
-        hours = int(time_elapsed // 3600)
-        minutes = int((time_elapsed % 3600) // 60)
-        
-        # HTML body
-        html = f"""
-        <html>
-          <body style="font-family: Arial, sans-serif;">
-            <h2 style="color: #2ecc71;">✅ Milestone Reached: {milestone} Users!</h2>
-            
-            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
-              <h3 style="color: #34495e;">📊 Progress Update</h3>
-              <ul style="font-size: 16px; line-height: 1.8;">
-                <li><strong>Users Collected:</strong> {total_users} / {settings['target_users']} ({progress_percent:.1f}%)</li>
-                <li><strong>Average Posts per User:</strong> {avg_posts:.1f}</li>
-                <li><strong>Average Sentiment:</strong> {avg_sentiment:.3f}</li>
-                <li><strong>Time Elapsed:</strong> {hours}h {minutes}m</li>
-              </ul>
-            </div>
-            
-            <div style="background-color: #e8f4f8; padding: 15px; border-radius: 5px; margin: 15px 0;">
-              <h3 style="color: #34495e;">⏱️ Estimated Time Remaining</h3>
-              <p style="font-size: 16px;">Based on current rate: ~{int((settings['target_users'] - total_users) * (time_elapsed / total_users) / 3600)} hours</p>
-            </div>
-            
-            <p style="color: #7f8c8d; font-size: 14px; margin-top: 20px;">
-              <em>Reddit Mental Health Data Collector</em>
-            </p>
-          </body>
-        </html>
-        """
-        
-        # Send via Resend API
-        response = requests.post(
-            'https://api.resend.com/emails',
-            headers={
-                'Authorization': f'Bearer {credentials["resend_api_key"]}',
-                'Content-Type': 'application/json'
-            },
-            json={
-                'from': 'Reddit Collector <noreply@info.moodmirror.online>',
-                'to': [credentials['notification_email']],
-                'subject': f'🎯 Reddit Collector Milestone: {milestone} Users Collected!',
-                'html': html
-            },
-            timeout=10
-        )
-        
-        if response.status_code == 200:
-            print(f"   📧 Email notification sent to {credentials['notification_email']}")
-        else:
-            print(f"   ⚠️  Failed to send email: {response.status_code} - {response.text}")
-            
-    except Exception as e:
-        print(f"   ⚠️  Email notification error: {e}")
-
-
-def send_completion_email(total_users, total_posts, avg_posts, avg_sentiment, avg_mh_participation, 
-                         total_time, candidates_checked, candidates_rejected):
-    """
-    Send email notification when data collection is completed using Resend API
-    """
-    if 'resend_api_key' not in credentials or 'notification_email' not in credentials:
-        print("   ⚠️  Completion email skipped - Resend API key or email not configured")
-        return
-    
-    try:
-        hours = int(total_time // 3600)
-        minutes = int((total_time % 3600) // 60)
-        seconds = int(total_time % 60)
-        
-        # HTML body
-        html = f"""
-        <html>
-          <body style="font-family: Arial, sans-serif;">
-            <h2 style="color: #27ae60;">🎉 Data Collection Completed!</h2>
-            
-            <div style="background-color: #d4edda; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #28a745;">
-              <h3 style="color: #155724;">✅ Collection Summary</h3>
-              <ul style="font-size: 16px; line-height: 1.8;">
-                <li><strong>Total Users Collected:</strong> {total_users} / {settings['target_users']}</li>
-                <li><strong>Total Posts Collected:</strong> {total_posts:,}</li>
-                <li><strong>Average Posts per User:</strong> {avg_posts:.1f}</li>
-                <li><strong>Success Rate:</strong> {total_users/max(candidates_checked,1)*100:.1f}%</li>
-              </ul>
-            </div>
-            
-            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
-              <h3 style="color: #34495e;">📊 Dataset Quality</h3>
-              <ul style="font-size: 16px; line-height: 1.8;">
-                <li><strong>Average Sentiment:</strong> {avg_sentiment:.3f}</li>
-                <li><strong>Average MH Participation:</strong> {avg_mh_participation:.1%}</li>
-                <li><strong>Candidates Checked:</strong> {candidates_checked}</li>
-                <li><strong>Candidates Rejected:</strong> {candidates_rejected}</li>
-              </ul>
-            </div>
-            
-            <div style="background-color: #e8f4f8; padding: 15px; border-radius: 5px; margin: 15px 0;">
-              <h3 style="color: #34495e;">⏱️ Time Statistics</h3>
-              <ul style="font-size: 16px; line-height: 1.8;">
-                <li><strong>Total Time:</strong> {hours}h {minutes}m {seconds}s</li>
-                <li><strong>Average Time per User:</strong> {total_time/total_users:.1f} seconds</li>
-                <li><strong>Posts Collected per Hour:</strong> {(total_posts/(total_time/3600)):.1f}</li>
-              </ul>
-            </div>
-            
-            <p style="color: #7f8c8d; font-size: 14px; margin-top: 20px;">
-              <em>Completed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</em>
-            </p>
-          </body>
-        </html>
-        """
-        
-        # Send via Resend API
-        response = requests.post(
-            'https://api.resend.com/emails',
-            headers={
-                'Authorization': f'Bearer {credentials["resend_api_key"]}',
-                'Content-Type': 'application/json'
-            },
-            json={
-                'from': 'Reddit Collector <noreply@info.moodmirror.online>',
-                'to': [credentials['notification_email']],
-                'subject': '🎉 Reddit Data Collection Completed!',
-                'html': html
-            },
-            timeout=10
-        )
-        
-        if response.status_code == 200:
-            print(f"\n📧 Completion email sent to {credentials['notification_email']}")
-        else:
-            print(f"\n⚠️  Failed to send completion email: {response.status_code} - {response.text}")
-            
-    except Exception as e:
-        print(f"\n⚠️  Completion email error: {e}")
 
 
 def extract_features(posts):
@@ -610,7 +464,7 @@ def extract_features(posts):
 # ============================================================================
 
 print("\n" + "="*70)
-print("🚀 STARTING DATA COLLECTION")
+print("STARTING DATA COLLECTION")
 print("="*70)
 
 # Start timing
@@ -624,9 +478,9 @@ candidates_rejected = 0
 try:
     with open('data/collected_users.json', 'r') as f:
         collected_users = json.load(f)
-    print(f"\n📂 Found existing data: {len(collected_users)} users already collected")
+    print(f"\nFound existing data: {len(collected_users)} users already collected")
 except:
-    print("\n📂 No existing data found, starting fresh")
+    print("\nNo existing data found, starting fresh")
 
 # Discover candidate users
 print("\n--- PHASE 1: DISCOVERING CANDIDATES ---")
@@ -653,64 +507,12 @@ candidates_to_check = [u for u in all_candidates
 # Free up memory
 del all_candidates
 
-print(f"\n📊 Discovery complete:")
+print(f"\nDiscovery complete:")
 print(f"   Found: {len(candidates_to_check) + len(already_collected)} total candidates")
 print(f"   Already collected: {len(already_collected)} users")
 print(f"   New to check: {len(candidates_to_check)} users")
 
-# Send startup email with candidate info using Resend API
-try:
-    if 'resend_api_key' in credentials and 'notification_email' in credentials:
-        html = f"""
-        <html>
-          <body style="font-family: Arial, sans-serif;">
-            <h2 style="color: #3498db;">🚀 Data Collection Started!</h2>
-            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px;">
-              <h3>Collection Parameters:</h3>
-              <ul style="font-size: 16px; line-height: 1.8;">
-                <li><strong>Target Users:</strong> {settings['target_users']}</li>
-                <li><strong>Min Posts per User:</strong> {settings['min_posts_per_user']}</li>
-                <li><strong>Min MH Participation:</strong> {settings['min_mh_participation_ratio']:.0%}</li>
-                <li><strong>Sentiment Range:</strong> -0.6 to 0.25</li>
-                <li><strong>Baseline Stability:</strong> ≥{settings['min_baseline_stability']}</li>
-              </ul>
-            </div>
-            <div style="background-color: #e8f4f8; padding: 15px; border-radius: 5px; margin-top: 15px;">
-              <h3>Candidate Discovery:</h3>
-              <ul style="font-size: 16px; line-height: 1.8;">
-                <li><strong>Total Candidates Found:</strong> {len(candidates_to_check) + len(already_collected)}</li>
-                <li><strong>Already Collected:</strong> {len(already_collected)}</li>
-                <li><strong>New to Check:</strong> {len(candidates_to_check)}</li>
-              </ul>
-            </div>
-            <p style="color: #7f8c8d; margin-top: 20px;">Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-          </body>
-        </html>
-        """
-        
-        response = requests.post(
-            'https://api.resend.com/emails',
-            headers={
-                'Authorization': f'Bearer {credentials["resend_api_key"]}',
-                'Content-Type': 'application/json'
-            },
-            json={
-                'from': 'Reddit Collector <noreply@info.moodmirror.online>',
-                'to': [credentials['notification_email']],
-                'subject': '🚀 Reddit Data Collection Started!',
-                'html': html
-            },
-            timeout=10
-        )
-        
-        if response.status_code == 200:
-            print("   📧 Startup email sent via Resend\n")
-        else:
-            print(f"   ⚠️  Failed to send startup email: {response.status_code}\n")
-    else:
-        print("   ⚠️  Resend API key not configured, skipping startup email\n")
-except Exception as e:
-    print(f"   ⚠️  Could not send startup email: {e}\n")
+
 
 # Collection loop
 print("\n--- PHASE 2: COLLECTING USER DATA ---")
@@ -719,7 +521,7 @@ print(f"Target: {settings['target_users']} users\n")
 for username in candidates_to_check:
     # Stop if we hit target
     if len(collected_users) >= settings['target_users']:
-        print(f"\n🎯 Target reached! Collected {len(collected_users)} users")
+        print(f"\nTarget reached! Collected {len(collected_users)} users")
         break
     
     candidates_checked += 1
@@ -732,7 +534,7 @@ for username in candidates_to_check:
     posts = collect_user_posts(username, settings['time_window_days'])
     
     if not posts:
-        print(f"   ⏭️  No posts found, skipping")
+        print(f"   No posts found, skipping")
         candidates_rejected += 1
         continue
     
@@ -740,18 +542,18 @@ for username in candidates_to_check:
     passed, reason = check_user_quality(posts)
     
     if not passed:
-        print(f"   ⏭️  {reason}")
+        print(f"   {reason}")
         candidates_rejected += 1
         continue
     
     # NEW: Validate sentiment distribution
     sentiment_valid, sentiment_reason, avg_sentiment = validate_sentiment_distribution(posts)
     if not sentiment_valid:
-        print(f"   ⏭️  {sentiment_reason}")
+        print(f"   {sentiment_reason}")
         candidates_rejected += 1
         continue
     else:
-        print(f"   ✅ Sentiment validated: avg={avg_sentiment:.3f}")
+        print(f"   Sentiment validated: avg={avg_sentiment:.3f}")
     
     # Extract features
     features = extract_features(posts)
@@ -760,7 +562,7 @@ for username in candidates_to_check:
     post_count = len(posts)
     required_posts = settings.get('min_posts_per_user', 30)
     if post_count < required_posts:
-        print(f"   ⏭️  Only {post_count} posts (need {required_posts}+ for reliable baselines)")
+        print(f"   Only {post_count} posts (need {required_posts}+ for reliable baselines)")
         candidates_rejected += 1
         continue
 
@@ -787,28 +589,14 @@ for username in candidates_to_check:
     
     collected_users.append(user_data)
     
-    print(f"   ✅ COLLECTED! ({len(posts)} posts, full_personalization) - Total: {len(collected_users)}/{settings['target_users']}")
+    print(f"   COLLECTED! ({len(posts)} posts, full_personalization) - Total: {len(collected_users)}/{settings['target_users']}")
 
     
     # Save after each user (in case of interruption)
     with open('data/collected_users.json', 'w') as f:
         json.dump(collected_users, f, indent=2)
     
-    # Send email notification at milestones (configurable)
-    email_milestone = settings.get('email_milestone_frequency', 100)
-    if len(collected_users) % email_milestone == 0:
-        total_posts = sum(u['features']['total_posts'] for u in collected_users)
-        avg_posts = total_posts / len(collected_users)
-        avg_sentiment = sum(u['features']['avg_sentiment'] for u in collected_users) / len(collected_users)
-        time_elapsed = time.time() - start_time
-        
-        send_email_notification(
-            milestone=len(collected_users),
-            total_users=len(collected_users),
-            avg_posts=avg_posts,
-            avg_sentiment=avg_sentiment,
-            time_elapsed=time_elapsed
-        )
+
     
     # Rate limiting (configurable)
     rate_limit = settings.get('rate_limit_seconds', 2)
@@ -819,12 +607,12 @@ for username in candidates_to_check:
 # ============================================================================
 
 print("\n" + "="*70)
-print("📊 COLLECTION COMPLETE")
+print("COLLECTION COMPLETE")
 print("="*70)
-print(f"\n✅ Successfully collected: {len(collected_users)} users")
-print(f"📊 Candidates checked: {candidates_checked}")
-print(f"❌ Candidates rejected: {candidates_rejected}")
-print(f"✓ Success rate: {len(collected_users)/max(candidates_checked,1)*100:.1f}%")
+print(f"\nSuccessfully collected: {len(collected_users)} users")
+print(f"Candidates checked: {candidates_checked}")
+print(f"Candidates rejected: {candidates_rejected}")
+print(f"Success rate: {len(collected_users)/max(candidates_checked,1)*100:.1f}%")
 
 # Calculate statistics
 if collected_users:
@@ -833,7 +621,7 @@ if collected_users:
     avg_sentiment = sum(u['features']['avg_sentiment'] for u in collected_users) / len(collected_users)
     avg_mh_participation = sum(u['features']['mental_health_participation'] for u in collected_users) / len(collected_users)
     
-    print(f"\n📈 Dataset Statistics:")
+    print(f"\nDataset Statistics:")
     print(f"   Total posts collected: {total_posts}")
     print(f"   Average posts per user: {avg_posts:.1f}")
     print(f"   Average sentiment: {avg_sentiment:.3f}")
@@ -842,13 +630,13 @@ if collected_users:
     # NEW: Sentiment distribution validation
     sentiments = [user['features']['avg_sentiment'] for user in collected_users]
     mh_participation_ratios = [user['features']['mental_health_participation'] for user in collected_users]
-    print(f"\n🎯 Data Quality Validation:")
+    print(f"\nData Quality Validation:")
     print(f"   Sentiment range: {min(sentiments):.3f} to {max(sentiments):.3f}")
     print(f"   Users with negative sentiment: {sum(1 for s in sentiments if s < 0)} ({sum(1 for s in sentiments if s < 0)/len(sentiments):.1%})")
     print(f"   Average MH participation: {avg_mh_participation:.1%}")
     print(f"   Users meeting 40%+ MH threshold: {sum(1 for ratio in mh_participation_ratios if ratio >= 0.4)} ({sum(1 for ratio in mh_participation_ratios if ratio >= 0.4)/len(mh_participation_ratios):.1%})")
 
-print(f"\n💾 Data saved to: data/collected_users.json")
+print(f"\nData saved to: data/collected_users.json")
 
 # Calculate population baseline statistics
 if collected_users:
@@ -879,7 +667,7 @@ if collected_users:
     population_baseline = calculate_population_baseline(collected_users)
     with open('data/population_baseline.json', 'w', encoding='utf-8') as f:
         json.dump(population_baseline, f, indent=2)
-    print("💾 Population baseline saved to: data/population_baseline.json")
+    print("Population baseline saved to: data/population_baseline.json")
 
 # Calculate total time
 total_time = time.time() - start_time
@@ -887,27 +675,16 @@ hours = int(total_time // 3600)
 minutes = int((total_time % 3600) // 60)
 seconds = int(total_time % 60)
 
-print("\n⏱️ Collection Time Statistics:")
+print("\nCollection Time Statistics:")
 print(f"   Total time: {hours}h {minutes}m {seconds}s")
 print(f"   Average time per user: {total_time/len(collected_users):.1f} seconds")
 print(f"   Posts collected per hour: {(total_posts/(total_time/3600)):.1f}")
 
-# Send completion email notification
-if collected_users:
-    send_completion_email(
-        total_users=len(collected_users),
-        total_posts=total_posts,
-        avg_posts=avg_posts,
-        avg_sentiment=avg_sentiment,
-        avg_mh_participation=avg_mh_participation,
-        total_time=total_time,
-        candidates_checked=candidates_checked,
-        candidates_rejected=candidates_rejected
-    )
+
 
 # Dataset composition statistics
 if collected_users:
-    print(f"\n🔬 Dataset Composition:")
+    print(f"\nDataset Composition:")
     min_posts = settings.get('min_posts_per_user', 30)
     print(f"   All users have {min_posts}+ posts (full personalization)")
     print(f"   Post count distribution:")
@@ -919,15 +696,15 @@ if collected_users:
 # write all the print statements to a log file
 with open('data/collection_log.txt', 'w', encoding='utf-8') as log_file:
     log_file.write("\n" + "="*70 + "\n")
-    log_file.write("📊 COLLECTION COMPLETE\n")
+    log_file.write("COLLECTION COMPLETE\n")
     log_file.write("="*70 + "\n")
-    log_file.write(f"\n✅ Successfully collected: {len(collected_users)} users\n")
-    log_file.write(f"📊 Candidates checked: {candidates_checked}\n")
-    log_file.write(f"❌ Candidates rejected: {candidates_rejected}\n")
-    log_file.write(f"✓ Success rate: {len(collected_users)/max(candidates_checked,1)*100:.1f}%\n")
+    log_file.write(f"\nSuccessfully collected: {len(collected_users)} users\n")
+    log_file.write(f"Candidates checked: {candidates_checked}\n")
+    log_file.write(f"Candidates rejected: {candidates_rejected}\n")
+    log_file.write(f"Success rate: {len(collected_users)/max(candidates_checked,1)*100:.1f}%\n")
 
     if collected_users:
-        log_file.write(f"\n📈 Dataset Statistics:\n")
+        log_file.write(f"\nDataset Statistics:\n")
         log_file.write(f"   Total posts collected: {total_posts}\n")
         log_file.write(f"   Average posts per user: {avg_posts:.1f}\n")
         log_file.write(f"   Average sentiment: {avg_sentiment:.3f}\n")
@@ -936,20 +713,20 @@ with open('data/collection_log.txt', 'w', encoding='utf-8') as log_file:
         # NEW: Sentiment distribution validation
         sentiments = [user['features']['avg_sentiment'] for user in collected_users]
         mh_participation_ratios = [user['features']['mental_health_participation'] for user in collected_users]
-        log_file.write(f"\n🎯 Data Quality Validation:\n")
+        log_file.write(f"\nData Quality Validation:\n")
         log_file.write(f"   Sentiment range: {min(sentiments):.3f} to {max(sentiments):.3f}\n")
         log_file.write(f"   Users with negative sentiment: {sum(1 for s in sentiments if s < 0)} ({sum(1 for s in sentiments if s < 0)/len(sentiments):.1%})\n")
         log_file.write(f"   Average MH participation: {avg_mh_participation:.1%}\n")
         log_file.write(f"   Users meeting 40%+ MH threshold: {sum(1 for ratio in mh_participation_ratios if ratio >= 0.4)} ({sum(1 for ratio in mh_participation_ratios if ratio >= 0.4)/len(mh_participation_ratios):.1%})\n")
         
-        log_file.write(f"\n⏱️ Collection Time Statistics:\n")
+        log_file.write(f"\nCollection Time Statistics:\n")
         log_file.write(f"   Total time: {hours}h {minutes}m {seconds}s\n")
         log_file.write(f"   Average time per user: {total_time/len(collected_users):.1f} seconds\n")
         log_file.write(f"   Posts collected per hour: {(total_posts/(total_time/3600)):.1f}\n")
         
         # Dataset composition statistics
         min_posts = settings.get('min_posts_per_user', 30)
-        log_file.write(f"\n🔬 Dataset Composition:\n")
+        log_file.write(f"\nDataset Composition:\n")
         log_file.write(f"   All users have {min_posts}+ posts (full personalization)\n")
         log_file.write(f"   Post count distribution:\n")
         post_counts = [u['metadata']['post_count'] for u in collected_users]
@@ -959,4 +736,4 @@ with open('data/collection_log.txt', 'w', encoding='utf-8') as log_file:
     else:
         log_file.write("\nNo users were collected.\n")
 
-print(f"\n✨ Done!\n")
+print(f"\nDone!\n")
